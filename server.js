@@ -9,6 +9,10 @@ const io = new Server(server);
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 const questions = [
   { text: "What is {player}'s favourite pizza topping?", category: "Food" },
   { text: "What is {player}'s favourite ice cream flavour?", category: "Food" },
