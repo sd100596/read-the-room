@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Read the Room - Guess Your Friends</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <div id="welcome-screen" class="screen active">
+      <h1>🎯 Read the Room</h1>
+      <p class="tagline">How well do you know your crew?</p>
+      <div class="welcome-buttons">
+        <button id="create-btn" class="btn btn-primary">Create Room</button>
+        <button id="join-btn" class="btn btn-secondary">Join Room</button>
+      </div>
+    </div>
+
+    <div id="name-screen" class="screen">
+      <h2 id="name-title">Join Room</h2>
+      <input type="text" id="player-name" placeholder="Enter your name" maxlength="15">
+      <input type="text" id="room-code-input" placeholder="Room Code" maxlength="6" style="display:none;">
+      <button id="name-submit" class="btn btn-primary">Continue</button>
+      <p id="name-error" class="error"></p>
+    </div>
+
+    <div id="lobby-screen" class="screen">
+      <div class="room-info">
+        <h2>Room Code</h2>
+        <div class="room-code" id="display-room-code">------</div>
+        <p class="share-hint">Share this code with friends!</p>
+      </div>
+      <div class="players-section">
+        <h3>Players (<span id="player-count">0</span>)</h3>
+        <ul id="players-list"></ul>
+      </div>
+      <button id="start-btn" class="btn btn-primary">Start Game</button>
+      <p id="lobby-error" class="error"></p>
+    </div>
+
+    <div id="game-screen" class="screen">
+      <div class="game-header">
+        <div class="round-info">Round <span id="current-round">1</span> / <span id="total-rounds">10</span></div>
+        <div class="scores-mini" id="scores-mini"></div>
+      </div>
+      
+      <div id="waiting-phase" class="game-phase">
+        <div class="question-display" id="question-text"></div>
+        <div class="target-info" id="target-player"></div>
+        <div class="answer-input">
+          <input type="text" id="answer-input" placeholder="What do you think?" maxlength="30">
+          <button id="submit-answer" class="btn btn-primary">Submit</button>
+        </div>
+        <p class="waiting-text" id="waiting-status">Waiting for answers...</p>
+      </div>
+
+      <div id="guessing-phase" class="game-phase" style="display:none;">
+        <div class="question-display" id="question-text-2"></div>
+        <div class="target-info" id="target-player-2"></div>
+        <p class="hint-text">Select the REAL answer!</p>
+        <div class="options-grid" id="options-grid"></div>
+        <button id="submit-guess" class="btn btn-primary" disabled>Make Guess</button>
+      </div>
+
+      <div id="results-phase" class="game-phase" style="display:none;">
+        <h3>Results</h3>
+        <div class="target-reveal">
+          <span id="target-name-result"></span>'s answer: <strong id="target-answer"></strong>
+        </div>
+        <div class="results-list" id="results-list"></div>
+        <div class="scores-display" id="scores-display"></div>
+        <button id="next-round-btn" class="btn btn-primary">Next Round</button>
+      </div>
+    </div>
+
+    <div id="end-screen" class="screen">
+      <h1>🏆 Game Over!</h1>
+      <div class="leaderboard" id="leaderboard"></div>
+      <button id="play-again-btn" class="btn btn-primary">Play Again</button>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
