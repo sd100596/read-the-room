@@ -134,7 +134,7 @@ socket.on('answerSubmitted', ({ count, total }) => {
 
 socket.on('allAnswersReceived', (data) => {
   answers = data.answers;
-  showGuessingPhase();
+  showGuessingPhase(answers);
 });
 
 function showWaitingPhase(question, targetName) {
@@ -149,7 +149,7 @@ function showWaitingPhase(question, targetName) {
   document.getElementById('submit-answer').disabled = false;
 }
 
-function showGuessingPhase() {
+function showGuessingPhase(answersObj) {
   document.getElementById('waiting-phase').style.display = 'none';
   document.getElementById('guessing-phase').style.display = 'block';
   document.getElementById('results-phase').style.display = 'none';
@@ -161,10 +161,20 @@ function showGuessingPhase() {
   grid.innerHTML = '';
   selectedAnswer = null;
   
-  answers.forEach((answer, index) => {
+  const answerList = Object.entries(answersObj);
+  
+  answerList.forEach(([playerId, answer]) => {
     const btn = document.createElement('button');
     btn.className = 'option-btn';
+    btn.dataset.playerId = playerId;
     btn.textContent = answer;
+    
+    if (playerId === socket.id) {
+      btn.disabled = true;
+      btn.title = "You can't pick your own answer";
+      btn.classList.add('disabled');
+    }
+    
     btn.addEventListener('click', () => {
       document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
       btn.classList.add('selected');

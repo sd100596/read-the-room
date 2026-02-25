@@ -166,8 +166,7 @@ io.on('connection', (socket) => {
     const answeredCount = Object.keys(room.answers).length;
     io.to(room.code).emit('answerSubmitted', { count: answeredCount, total: room.players.length });
     if (answeredCount === room.players.length) {
-      const answersList = Object.values(room.answers);
-      io.to(room.code).emit('allAnswersReceived', { answers: answersList });
+      io.to(room.code).emit('allAnswersReceived', { answers: room.answers });
     }
     callback({ success: true });
   });

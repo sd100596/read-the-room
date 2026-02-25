@@ -291,6 +291,18 @@ input::placeholder {
   background: rgba(233, 69, 96, 0.2);
 }
 
+.option-btn:disabled,
+.option-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.option-btn:disabled:hover,
+.option-btn.disabled:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .target-reveal {
   background: rgba(255, 217, 61, 0.1);
   padding: 20px;
