@@ -94,6 +94,7 @@ io.on('connection', (socket) => {
     const roomCode = generateRoomCode();
     rooms[roomCode] = {
       code: roomCode,
+      hostId: socket.id,
       players: [],
       gameState: 'lobby',
       currentRound: 0,
@@ -105,12 +106,12 @@ io.on('connection', (socket) => {
       currentTargetIndex: 0
     };
     socket.join(roomCode);
-    const player = { id: socket.id, name: playerName, score: 0 };
+    const player = { id: socket.id, name: playerName, score: 0, isHost: true };
     rooms[roomCode].players.push(player);
     rooms[roomCode].scores[socket.id] = 0;
     socket.roomCode = roomCode;
     socket.playerName = playerName;
-    callback({ success: true, roomCode, player, players: rooms[roomCode].players });
+    callback({ success: true, roomCode, player, players: rooms[roomCode].players, isHost: true });
   });
 
   socket.on('joinRoom', (roomCode, playerName, callback) => {
@@ -128,18 +129,26 @@ io.on('connection', (socket) => {
       return;
     }
     socket.join(roomCode.toUpperCase());
-    const player = { id: socket.id, name: playerName, score: 0 };
+    const player = { id: socket.id, name: playerName, score: 0, isHost: false };
     room.players.push(player);
     room.scores[socket.id] = 0;
     socket.roomCode = roomCode.toUpperCase();
     socket.playerName = playerName;
     io.to(roomCode.toUpperCase()).emit('playerJoined', room.players);
-    callback({ success: true, roomCode: roomCode.toUpperCase(), player, players: room.players });
+    callback({ success: true, roomCode: roomCode.toUpperCase(), player, players: room.players, isHost: false });
   });
 
   socket.on('startGame', (callback) => {
     const room = rooms[socket.roomCode];
-    if (!room || room.players.length < 2) {
+    if (!room) {
+      callback({ success: false, error: 'Room not found' });
+      return;
+    }
+    if (socket.id !== room.hostId) {
+      callback({ success: false, error: 'Only the host can start the game' });
+      return;
+    }
+    if (room.players.length < 2) {
       callback({ success: false, error: 'Need at least 2 players' });
       return;
     }
@@ -228,7 +237,14 @@ io.on('connection', (socket) => {
 
   socket.on('nextRound', (callback) => {
     const room = rooms[socket.roomCode];
-    if (!room) return;
+    if (!room) {
+      callback({ success: false, error: 'Room not found' });
+      return;
+    }
+    if (socket.id !== room.hostId) {
+      callback({ success: false, error: 'Only the host can advance the round' });
+      return;
+    }
     
     room.currentTargetIndex = (room.currentTargetIndex + 1) % room.players.length;
     room.currentRound++;
@@ -241,7 +257,6 @@ io.on('connection', (socket) => {
         .map(p => ({ name: p.name, score: room.scores[p.id] || 0 }))
         .sort((a, b) => b.score - a.score);
       io.to(room.code).emit('gameEnded', { leaderboard });
-      callback({ success: true, ended: true });
     } else {
       const targetPlayer = room.players[room.currentTargetIndex];
       const question = room.questions[room.currentRound - 1].text.replace('{player}', targetPlayer.name);
@@ -252,8 +267,8 @@ io.on('connection', (socket) => {
         targetPlayer: targetPlayer.name,
         targetId: targetPlayer.id
       });
-      callback({ success: true, ended: false });
     }
+    callback({ success: true });
   });
 
   socket.on('getPlayers', (callback) => {
@@ -276,9 +291,15 @@ io.on('connection', (socket) => {
       if (room.players.length === 0) {
         delete rooms[socket.roomCode];
       } else {
+        // Assign new host if current host left
+        if (socket.id === room.hostId && room.players.length > 0) {
+          room.hostId = room.players[0].id;
+          room.players[0].isHost = true;
+        }
+        
         io.to(socket.roomCode).emit('playerLeft', { 
           players: room.players,
-          remainingId: socket.id 
+          hostId: room.hostId
         });
         
         if (room.gameState === 'playing' && room.players.length < 2) {

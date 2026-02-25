@@ -4,6 +4,7 @@ let currentScreen = 'welcome';
 let playerName = '';
 let roomCode = '';
 let players = [];
+let isHost = false;
 let currentRound = 1;
 let totalRounds = 10;
 let selectedAnswer = null;
@@ -60,6 +61,7 @@ document.getElementById('name-submit').addEventListener('click', () => {
       if (response.success) {
         roomCode = response.roomCode;
         players = response.players;
+        isHost = response.isHost;
         updateLobby();
         showScreen('lobby');
       } else {
@@ -71,6 +73,7 @@ document.getElementById('name-submit').addEventListener('click', () => {
       if (response.success) {
         roomCode = response.roomCode;
         players = response.players;
+        isHost = response.isHost;
         updateLobby();
         showScreen('lobby');
       }
@@ -94,18 +97,24 @@ function updateLobby() {
   document.getElementById('display-room-code').textContent = roomCode;
   document.getElementById('player-count').textContent = players.length;
   const list = document.getElementById('players-list');
-  list.innerHTML = players.map(p => `<li>${p.name}</li>`).join('');
+  list.innerHTML = players.map(p => `<li>${p.name}${p.isHost ? ' 👑' : ''}</li>`).join('');
   
-  document.getElementById('start-btn').disabled = players.length < 2;
+  const startBtn = document.getElementById('start-btn');
+  startBtn.style.display = isHost ? 'block' : 'none';
+  if (isHost) {
+    startBtn.disabled = players.length < 2;
+  }
 }
 
 socket.on('playerJoined', (updatedPlayers) => {
   players = updatedPlayers;
+  isHost = players.some(p => p.id === socket.id && p.isHost);
   updateLobby();
 });
 
-socket.on('playerLeft', ({ players: leftPlayers, remainingId }) => {
+socket.on('playerLeft', ({ players: leftPlayers, hostId }) => {
   players = leftPlayers;
+  isHost = hostId === socket.id;
   updateLobby();
 });
 
@@ -229,6 +238,26 @@ socket.on('roundResults', (data) => {
   `).join('');
   
   updateScoresMini(data.scores);
+  
+  // Show/hide Next Round button based on host status
+  const nextRoundBtn = document.getElementById('next-round-btn');
+  nextRoundBtn.style.display = isHost ? 'block' : 'none';
+  
+  // Add waiting message for non-hosts
+  let waitingMsg = document.getElementById('waiting-host-msg');
+  if (!isHost) {
+    if (!waitingMsg) {
+      waitingMsg = document.createElement('p');
+      waitingMsg.id = 'waiting-host-msg';
+      waitingMsg.className = 'waiting-text';
+      waitingMsg.style.textAlign = 'center';
+      nextRoundBtn.parentNode.insertBefore(waitingMsg, nextRoundBtn);
+    }
+    waitingMsg.textContent = 'Waiting for host to start next round...';
+    waitingMsg.style.display = 'block';
+  } else if (waitingMsg) {
+    waitingMsg.style.display = 'none';
+  }
 });
 
 function updateScoresMini(scores) {
@@ -238,16 +267,20 @@ function updateScoresMini(scores) {
   ).join('');
 }
 
+// Listen for broadcasted new round from server
+socket.on('newRound', (data) => {
+  currentRound = data.round;
+  currentTargetPlayer = data.targetPlayer;
+  currentTargetId = data.targetId;
+  document.getElementById('current-round').textContent = currentRound;
+  showWaitingPhase(data.question, data.targetPlayer);
+});
+
 document.getElementById('next-round-btn').addEventListener('click', () => {
   socket.emit('nextRound', (response) => {
-    if (response.ended) {
-      return;
+    if (!response.success) {
+      console.error(response.error);
     }
-    currentRound = response.round;
-    currentTargetPlayer = response.targetPlayer;
-    currentTargetId = response.targetId;
-    document.getElementById('current-round').textContent = currentRound;
-    showWaitingPhase(response.question, response.targetPlayer);
   });
 });
 
