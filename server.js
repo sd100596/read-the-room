@@ -13,14 +13,7 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-const questions = [
-  { text: "If {player} was stuck on a desert island, what ONE thing would they bring?", category: "Hypothetical" },
-  { text: "What would {player}'s weapon of choice be in a zombie apocalypse?", category: "Hypothetical" },
-  { text: "If {player} could have dinner with any celebrity, who would it be?", category: "Hypothetical" },
-  { text: "What would {player}'s superpower be if they could have any?", category: "Hypothetical" },
   { text: "If {player} could travel to any time period, where would they go?", category: "Hypothetical" },
-  { text: "Would {player} rather fight 1 horse-sized duck or 100 duck-sized horses?", category: "Would You Rather" },
-  { text: "Would {player} rather sing karaoke or stay silent forever?", category: "Would You Rather" },
   { text: "If {player} could only eat one food for the rest of their life, what would it be?", category: "Hypothetical" },
   { text: "What would {player}'s dream job be if money wasn't a factor?", category: "Hypothetical" },
   { text: "If {player} could instantly master any skill, what would it be?", category: "Hypothetical" },
