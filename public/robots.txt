@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://read-the-room.onrender.com/sitemap.xml
