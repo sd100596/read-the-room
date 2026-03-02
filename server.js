@@ -13,6 +13,7 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+const questions = [
   { text: "If {player} could travel to any time period, where would they go?", category: "Hypothetical" },
   { text: "If {player} could only eat one food for the rest of their life, what would it be?", category: "Hypothetical" },
   { text: "What would {player}'s dream job be if money wasn't a factor?", category: "Hypothetical" },
