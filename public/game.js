@@ -11,6 +11,129 @@ let selectedAnswer = null;
 let answers = [];
 let currentTargetPlayer = '';
 let currentTargetId = '';
+let currentQuestion = '';
+
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playSound(type) {
+  try {
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    const now = audioCtx.currentTime;
+
+    switch(type) {
+      case 'tick':
+        oscillator.frequency.setValueAtTime(800, now);
+        oscillator.type = 'sine';
+        gainNode.gain.setValueAtTime(0.1, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+        oscillator.start(now);
+        oscillator.stop(now + 0.1);
+        break;
+      case 'go':
+        oscillator.frequency.setValueAtTime(523, now);
+        oscillator.frequency.setValueAtTime(659, now + 0.1);
+        oscillator.frequency.setValueAtTime(784, now + 0.2);
+        oscillator.type = 'sine';
+        gainNode.gain.setValueAtTime(0.2, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+        oscillator.start(now);
+        oscillator.stop(now + 0.4);
+        break;
+      case 'submit':
+        oscillator.frequency.setValueAtTime(440, now);
+        oscillator.type = 'sine';
+        gainNode.gain.setValueAtTime(0.15, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+        oscillator.start(now);
+        oscillator.stop(now + 0.15);
+        break;
+      case 'select':
+        oscillator.frequency.setValueAtTime(600, now);
+        oscillator.type = 'sine';
+        gainNode.gain.setValueAtTime(0.1, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+        oscillator.start(now);
+        oscillator.stop(now + 0.08);
+        break;
+      case 'correct':
+        oscillator.frequency.setValueAtTime(523, now);
+        oscillator.frequency.setValueAtTime(659, now + 0.1);
+        oscillator.frequency.setValueAtTime(784, now + 0.2);
+        oscillator.frequency.setValueAtTime(1047, now + 0.3);
+        oscillator.type = 'sine';
+        gainNode.gain.setValueAtTime(0.2, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+        oscillator.start(now);
+        oscillator.stop(now + 0.5);
+        break;
+      case 'wrong':
+        oscillator.frequency.setValueAtTime(200, now);
+        oscillator.frequency.setValueAtTime(150, now + 0.15);
+        oscillator.type = 'sawtooth';
+        gainNode.gain.setValueAtTime(0.1, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        oscillator.start(now);
+        oscillator.stop(now + 0.3);
+        break;
+      case 'countdown':
+        oscillator.frequency.setValueAtTime(700, now);
+        oscillator.type = 'sine';
+        gainNode.gain.setValueAtTime(0.15, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+        oscillator.start(now);
+        oscillator.stop(now + 0.2);
+        break;
+      case 'whoosh':
+        oscillator.frequency.setValueAtTime(300, now);
+        oscillator.frequency.exponentialRampToValueAtTime(800, now + 0.3);
+        oscillator.type = 'sine';
+        gainNode.gain.setValueAtTime(0.1, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        oscillator.start(now);
+        oscillator.stop(now + 0.3);
+        break;
+    }
+  } catch (e) {
+    console.log('Audio not supported');
+  }
+}
+
+function showCountdown(question, target, callback) {
+  const overlay = document.getElementById('countdown-overlay');
+  const numberEl = document.getElementById('countdown-number');
+  const labelEl = document.getElementById('countdown-label');
+  const questionEl = document.getElementById('countdown-question');
+  const targetEl = document.getElementById('countdown-target');
+
+  questionEl.textContent = question;
+  targetEl.textContent = `Target: ${target}`;
+  overlay.classList.add('active');
+
+  let count = 3;
+  numberEl.textContent = count;
+  labelEl.textContent = 'Get Ready!';
+  playSound('countdown');
+
+  const interval = setInterval(() => {
+    count--;
+    if (count > 0) {
+      numberEl.textContent = count;
+      playSound('countdown');
+    } else if (count === 0) {
+      numberEl.textContent = 'GO!';
+      labelEl.textContent = "Let's Go!";
+      playSound('go');
+    } else {
+      clearInterval(interval);
+      overlay.classList.remove('active');
+      if (callback) callback();
+    }
+  }, 1000);
+}
 
 const screens = {
   welcome: document.getElementById('welcome-screen'),
@@ -55,6 +178,7 @@ document.getElementById('name-submit').addEventListener('click', () => {
   
   playerName = name;
   errorEl.textContent = '';
+  playSound('select');
   
   if (code) {
     socket.emit('joinRoom', code, name, (response) => {
@@ -97,7 +221,7 @@ function updateLobby() {
   document.getElementById('display-room-code').textContent = roomCode;
   document.getElementById('player-count').textContent = players.length;
   const list = document.getElementById('players-list');
-  list.innerHTML = players.map(p => `<li>${p.name}${p.isHost ? ' 👑' : ''}</li>`).join('');
+  list.innerHTML = players.map(p => `<li>${p.name}${p.isHost ? '<span class="host-badge">HOST</span>' : ''}</li>`).join('');
   
   const startBtn = document.getElementById('start-btn');
   startBtn.style.display = isHost ? 'block' : 'none';
@@ -110,6 +234,7 @@ socket.on('playerJoined', (updatedPlayers) => {
   players = updatedPlayers;
   isHost = players.some(p => p.id === socket.id && p.isHost);
   updateLobby();
+  playSound('select');
 });
 
 socket.on('playerLeft', ({ players: leftPlayers, hostId }) => {
@@ -131,10 +256,14 @@ socket.on('gameStarted', (data) => {
   currentRound = data.round;
   currentTargetPlayer = data.targetPlayer;
   currentTargetId = data.targetId;
+  currentQuestion = data.question;
   document.getElementById('current-round').textContent = currentRound;
   document.getElementById('total-rounds').textContent = totalRounds;
   showScreen('game');
-  showWaitingPhase(data.question, data.targetPlayer);
+  
+  showCountdown(data.question, data.targetPlayer, () => {
+    showWaitingPhase(data.question, data.targetPlayer);
+  });
 });
 
 socket.on('answerSubmitted', ({ count, total }) => {
@@ -163,7 +292,7 @@ function showGuessingPhase(answersObj) {
   document.getElementById('guessing-phase').style.display = 'block';
   document.getElementById('results-phase').style.display = 'none';
   
-  document.getElementById('question-text-2').textContent = `What is ${currentTargetPlayer}'s favourite...?`;
+  document.getElementById('question-text-2').textContent = currentQuestion;
   document.getElementById('target-player-2').textContent = `Guess ${currentTargetPlayer}'s answer!`;
   
   const grid = document.getElementById('options-grid');
@@ -189,6 +318,7 @@ function showGuessingPhase(answersObj) {
       btn.classList.add('selected');
       selectedAnswer = answer;
       document.getElementById('submit-guess').disabled = false;
+      playSound('select');
     });
     grid.appendChild(btn);
   });
@@ -202,6 +332,7 @@ document.getElementById('submit-answer').addEventListener('click', () => {
   
   socket.emit('submitAnswer', answer, () => {
     document.getElementById('submit-answer').disabled = true;
+    playSound('submit');
   });
 });
 
@@ -209,6 +340,7 @@ document.getElementById('submit-guess').addEventListener('click', () => {
   if (!selectedAnswer) return;
   socket.emit('submitGuess', selectedAnswer, () => {
     document.getElementById('submit-guess').disabled = true;
+    playSound('submit');
   });
 });
 
@@ -221,13 +353,16 @@ socket.on('roundResults', (data) => {
   document.getElementById('target-answer').textContent = data.targetAnswer;
   
   const resultsList = document.getElementById('results-list');
-  resultsList.innerHTML = data.results.map(r => `
-    <div class="result-item ${r.isCorrect ? 'correct' : 'wrong'}">
-      <span class="result-player">${r.playerName}</span>
-      <span class="result-guess">${r.guess}</span>
-      <span class="result-points">+${r.points}</span>
-    </div>
-  `).join('');
+  resultsList.innerHTML = data.results.map(r => {
+    if (r.isCorrect) playSound('correct');
+    return `
+      <div class="result-item ${r.isCorrect ? 'correct' : 'wrong'}">
+        <span class="result-player">${r.playerName}</span>
+        <span class="result-guess">${r.guess}</span>
+        <span class="result-points">+${r.points}</span>
+      </div>
+    `;
+  }).join('');
   
   const scoresDisplay = document.getElementById('scores-display');
   scoresDisplay.innerHTML = data.players.map(p => `
@@ -239,11 +374,9 @@ socket.on('roundResults', (data) => {
   
   updateScoresMini(data.scores);
   
-  // Show/hide Next Round button based on host status
   const nextRoundBtn = document.getElementById('next-round-btn');
   nextRoundBtn.style.display = isHost ? 'block' : 'none';
   
-  // Add waiting message for non-hosts
   let waitingMsg = document.getElementById('waiting-host-msg');
   if (!isHost) {
     if (!waitingMsg) {
@@ -267,16 +400,20 @@ function updateScoresMini(scores) {
   ).join('');
 }
 
-// Listen for broadcasted new round from server
 socket.on('newRound', (data) => {
   currentRound = data.round;
   currentTargetPlayer = data.targetPlayer;
   currentTargetId = data.targetId;
+  currentQuestion = data.question;
   document.getElementById('current-round').textContent = currentRound;
-  showWaitingPhase(data.question, data.targetPlayer);
+  
+  showCountdown(data.question, data.targetPlayer, () => {
+    showWaitingPhase(data.question, data.targetPlayer);
+  });
 });
 
 document.getElementById('next-round-btn').addEventListener('click', () => {
+  playSound('whoosh');
   socket.emit('nextRound', (response) => {
     if (!response.success) {
       console.error(response.error);
@@ -286,6 +423,7 @@ document.getElementById('next-round-btn').addEventListener('click', () => {
 
 socket.on('gameEnded', (data) => {
   showScreen('end');
+  playSound('correct');
   const leaderboard = document.getElementById('leaderboard');
   leaderboard.innerHTML = data.leaderboard.map((p, i) => `
     <div class="leaderboard-item">
